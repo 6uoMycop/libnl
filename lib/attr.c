@@ -545,6 +545,42 @@ int nla_put_addr(struct nl_msg *msg, int attrtype, struct nl_addr *addr)
 		       nl_addr_get_binary_addr(addr));
 }
 
+/**
+ * Rewrite an unspecific attribute of netlink message.
+ * @arg head		Head of attributes stream.
+ * @arg len		Length of attributes stream.
+ * @arg attrtype	Attribute type.
+ * @arg datalen		Length of data to be used as payload.
+ * @arg data		Pointer to data to be used as attribute payload.
+ *
+ * Rewrites payload of first existing attribute of given type. Returns an error
+ * if attribute of given type not found of the existing attribute's payload length
+ * is not equal to new payload length or given null head of attributes stream.
+ *
+ * @return 0 on success or a negative error code.
+ */
+int nla_rewrite(struct nlattr *head, int len, int attrtype, int datalen, const void *data)
+{
+	struct nlattr *nla;
+
+	if (!head)
+		return -NLE_INVAL;
+
+	nla = nla_find(head, len, attrtype);
+
+	if (!nla)
+		return -NLE_OBJ_NOTFOUND;
+
+	if (datalen > 0 && datalen < nla_len(nla)) {
+		memcpy(nla_data(nla), data, datalen);
+		NL_DBG(2, "attr <%p> %d: Wrote %d bytes at offset +%td\n",
+		       nla, nla->nla_type, datalen,
+		       (void *) nla - nlmsg_data(msg->nm_nlh));
+	}
+
+	return 0;
+}
+
 /** @} */
 
 /**
